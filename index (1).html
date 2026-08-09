@@ -1,0 +1,486 @@
+<!--
+  Project: Rich Blueprints — Swipe Directory (working title: SWIPEVAULT)
+  Version: V2  |  Date: 2026-08-07  (V2: mobile filter bar no longer sticky; chips scroll horizontally)
+  A searchable swipe-file directory for budding marketers.
+  Filter proven assets by asset type, category, or brand. Click a card for the breakdown.
+  Self-contained: all CSS/JS inline, sample data baked in. No backend yet (client-side filter over a JS array).
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SWIPEVAULT — See what's actually working</title>
+  <meta name="description" content="A searchable swipe file of proven marketing assets — landing pages, ad copy, video hooks, emails and VSLs. Filter by category, brand or asset type." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#0a0a0b;
+      --bg-2:#101012;
+      --panel:#141416;
+      --line:#26262a;
+      --line-2:#333338;
+      --text:#f2f2ef;
+      --muted:#8b8b90;
+      --muted-2:#6a6a70;
+      --accent:#e8ff47;
+      --accent-dim:#c9dd2f;
+      --display:'Syne',sans-serif;
+      --mono:'DM Mono',ui-monospace,monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--mono);
+      font-weight:400;
+      line-height:1.5;
+      -webkit-font-smoothing:antialiased;
+      overflow-x:hidden;
+      position:relative;
+    }
+    /* subtle grid + grain */
+    body::before{
+      content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:
+        linear-gradient(var(--line) 1px,transparent 1px),
+        linear-gradient(90deg,var(--line) 1px,transparent 1px);
+      background-size:64px 64px;
+      opacity:.15;
+      mask-image:radial-gradient(ellipse 100% 60% at 50% 0%,#000 40%,transparent 100%);
+    }
+    body::after{
+      content:"";position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.04;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .wrap{position:relative;z-index:2;max-width:1220px;margin:0 auto;padding:0 24px}
+    a{color:inherit;text-decoration:none}
+    button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+
+    /* ---------- NAV ---------- */
+    nav{position:sticky;top:0;z-index:50;background:rgba(10,10,11,.82);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+    .nav-inner{display:flex;align-items:center;justify-content:space-between;height:66px}
+    .brand{font-family:var(--display);font-weight:800;font-size:1.35rem;letter-spacing:-.02em;display:flex;align-items:center;gap:9px}
+    .brand .dot{width:11px;height:11px;background:var(--accent);display:inline-block}
+    .nav-links{display:flex;align-items:center;gap:30px}
+    .nav-links a{font-size:.82rem;color:var(--muted);letter-spacing:.02em;transition:color .15s}
+    .nav-links a:hover{color:var(--text)}
+    .nav-cta{border:1px solid var(--accent);color:var(--accent);padding:9px 16px;font-size:.78rem;letter-spacing:.03em;transition:.15s}
+    .nav-cta:hover{background:var(--accent);color:#000}
+    .hamburger{display:none;flex-direction:column;gap:5px;padding:10px;width:44px;height:44px;justify-content:center;align-items:center}
+    .hamburger span{width:22px;height:2px;background:var(--text);transition:.25s;display:block}
+    .hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+    .hamburger.open span:nth-child(2){opacity:0}
+    .hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+    .mobile-menu{display:none;flex-direction:column;background:var(--bg-2);border-bottom:1px solid var(--line)}
+    .mobile-menu.open{display:flex}
+    .mobile-menu a{padding:16px 24px;border-top:1px solid var(--line);font-size:.95rem;color:var(--muted)}
+
+    /* ---------- HERO ---------- */
+    header{padding:74px 0 40px;text-align:center}
+    .eyebrow{font-size:.75rem;letter-spacing:.28em;color:var(--accent);text-transform:uppercase;margin-bottom:22px}
+    h1{font-family:var(--display);font-weight:800;font-size:clamp(2.4rem,6.5vw,4.6rem);line-height:.98;letter-spacing:-.03em;margin-bottom:22px}
+    h1 em{font-style:normal;color:var(--accent)}
+    .sub{max-width:560px;margin:0 auto 34px;color:var(--muted);font-size:1.02rem}
+    .search-hero{max-width:620px;margin:0 auto;display:flex;border:1px solid var(--line-2);background:var(--panel)}
+    .search-hero input{flex:1;background:none;border:none;color:var(--text);font-family:var(--mono);font-size:1rem;padding:17px 18px;outline:none}
+    .search-hero input::placeholder{color:var(--muted-2)}
+    .search-hero button{background:var(--accent);color:#000;padding:0 24px;font-weight:500;font-size:.85rem;letter-spacing:.02em;display:flex;align-items:center}
+    .stats{display:flex;justify-content:center;gap:44px;margin-top:40px;flex-wrap:wrap}
+    .stat{text-align:center}
+    .stat b{font-family:var(--display);font-size:1.7rem;display:block;color:var(--text)}
+    .stat span{font-size:.72rem;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase}
+
+    /* ---------- FILTER BAR ---------- */
+    .toolbar{margin-top:56px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:20px 0;position:sticky;top:66px;z-index:40;background:rgba(10,10,11,.9);backdrop-filter:blur(12px)}
+    .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .chip{border:1px solid var(--line-2);padding:8px 15px;font-size:.78rem;color:var(--muted);letter-spacing:.02em;transition:.15s;white-space:nowrap}
+    .chip:hover{border-color:var(--muted);color:var(--text)}
+    .chip.active{background:var(--accent);border-color:var(--accent);color:#000;font-weight:500}
+    .filter-row{display:flex;gap:14px;align-items:center;margin-top:14px;flex-wrap:wrap}
+    .filter-row select,.filter-row .mini-search{background:var(--panel);border:1px solid var(--line-2);color:var(--text);font-family:var(--mono);font-size:.8rem;padding:10px 13px;outline:none}
+    .filter-row select:focus,.filter-row .mini-search:focus{border-color:var(--accent)}
+    .mini-search{min-width:200px}
+    .count{margin-left:auto;font-size:.76rem;color:var(--muted-2);letter-spacing:.06em}
+    .count b{color:var(--accent)}
+
+    /* ---------- GRID ---------- */
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding:36px 0 90px}
+    .card{border:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;transition:.18s;cursor:pointer}
+    .card:hover{border-color:var(--muted);transform:translateY(-3px)}
+    .thumb{aspect-ratio:16/10;position:relative;overflow:hidden;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+    .thumb .type-tag{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.7);border:1px solid var(--line-2);color:var(--accent);font-size:.66rem;letter-spacing:.1em;padding:5px 9px;text-transform:uppercase}
+    .thumb .glyph{font-family:var(--display);font-weight:800;font-size:2.2rem;opacity:.9}
+    .card-body{padding:16px 16px 18px;flex:1;display:flex;flex-direction:column}
+    .card-brand{font-family:var(--display);font-weight:700;font-size:1.05rem;margin-bottom:6px}
+    .card-note{font-size:.82rem;color:var(--muted);line-height:1.45;flex:1}
+    .card-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px}
+    .tag{font-size:.66rem;color:var(--muted-2);border:1px solid var(--line);padding:3px 8px;letter-spacing:.04em}
+    .empty{grid-column:1/-1;text-align:center;padding:70px 0;color:var(--muted-2)}
+    .empty b{font-family:var(--display);color:var(--text);font-size:1.3rem;display:block;margin-bottom:8px}
+
+    /* ---------- MODAL ---------- */
+    .modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--bg-2);border:1px solid var(--line-2);max-width:680px;width:100%;position:relative}
+    .modal-hero{aspect-ratio:16/8;display:flex;align-items:center;justify-content:center;border-bottom:1px solid var(--line-2);position:relative}
+    .modal-hero .glyph{font-family:var(--display);font-weight:800;font-size:3.4rem}
+    .modal-close{position:absolute;top:14px;right:14px;width:40px;height:40px;border:1px solid var(--line-2);background:rgba(0,0,0,.6);color:var(--text);font-size:1.2rem;display:flex;align-items:center;justify-content:center}
+    .modal-close:hover{border-color:var(--accent);color:var(--accent)}
+    .modal-body{padding:28px 30px 34px}
+    .modal-type{font-size:.72rem;letter-spacing:.16em;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+    .modal-body h2{font-family:var(--display);font-weight:800;font-size:1.9rem;letter-spacing:-.02em;margin-bottom:16px}
+    .modal-section{margin-bottom:20px}
+    .modal-section h3{font-size:.72rem;letter-spacing:.14em;color:var(--muted-2);text-transform:uppercase;margin-bottom:8px}
+    .modal-section p{color:var(--text);font-size:.92rem;line-height:1.6}
+    .modal-tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+
+    /* ---------- FOOTER ---------- */
+    footer{border-top:1px solid var(--line);padding:38px 0}
+    .foot-inner{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+    .foot-inner .brand{font-size:1.1rem}
+    footer p{font-size:.74rem;color:var(--muted-2);letter-spacing:.04em}
+
+    /* ---------- RESPONSIVE ---------- */
+    @media(max-width:860px){
+      .grid{grid-template-columns:repeat(2,1fr)}
+    }
+    @media(max-width:640px){
+      .nav-links{display:none}
+      .hamburger{display:flex}
+      .grid{grid-template-columns:1fr}
+      /* toolbar scrolls away instead of pinning and eating the screen */
+      .toolbar{position:static;top:auto;margin-top:40px;padding:16px 0}
+      /* asset-type chips become one swipe-across row instead of 3 stacked rows */
+      .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;scrollbar-width:none;-ms-overflow-style:none}
+      .chips::-webkit-scrollbar{display:none}
+      .chip{flex:0 0 auto}
+      .filter-row{gap:10px}
+      .count{width:100%;margin-left:0;margin-top:4px}
+      .stats{gap:28px}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="wrap nav-inner">
+      <a href="#" class="brand"><span class="dot"></span>SWIPEVAULT</a>
+      <div class="nav-links">
+        <a href="#browse">Browse</a>
+        <a href="#browse">Categories</a>
+        <a href="#">Submit a swipe</a>
+        <a href="#">About</a>
+        <a href="#" class="nav-cta">Get access</a>
+      </div>
+      <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="#browse">Browse</a>
+      <a href="#browse">Categories</a>
+      <a href="#">Submit a swipe</a>
+      <a href="#">About</a>
+      <a href="#">Get access</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header>
+    <div class="wrap">
+      <p class="eyebrow">The marketer's swipe file</p>
+      <h1>See what's<br><em>actually working.</em></h1>
+      <p class="sub">A living library of proven marketing assets — landing pages, ad copy, video hooks, emails and VSLs. Search by brand, filter by category, steal what converts.</p>
+      <div class="search-hero">
+        <input type="text" id="heroSearch" placeholder="Search brands, hooks, categories…" />
+        <button id="heroSearchBtn">Search →</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="statCount">0</b><span>Swipes</span></div>
+        <div class="stat"><b>6</b><span>Asset types</span></div>
+        <div class="stat"><b>8</b><span>Categories</span></div>
+        <div class="stat"><b>Weekly</b><span>New drops</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TOOLBAR / FILTERS -->
+  <div class="toolbar" id="browse">
+    <div class="wrap">
+      <div class="chips" id="typeChips">
+        <button class="chip active" data-type="all">All assets</button>
+        <button class="chip" data-type="Landing Page">Landing Pages</button>
+        <button class="chip" data-type="Ad Copy">Ad Copy</button>
+        <button class="chip" data-type="Video Hook">Video Hooks</button>
+        <button class="chip" data-type="Email">Emails</button>
+        <button class="chip" data-type="VSL">VSLs</button>
+        <button class="chip" data-type="Ad Creative">Ad Creative</button>
+      </div>
+      <div class="filter-row">
+        <select id="categoryFilter">
+          <option value="all">All categories</option>
+        </select>
+        <select id="brandFilter">
+          <option value="all">All brands</option>
+        </select>
+        <input type="text" class="mini-search" id="keywordFilter" placeholder="Keyword…" />
+        <select id="sortFilter">
+          <option value="new">Sort: Newest</option>
+          <option value="brand">Sort: Brand A–Z</option>
+        </select>
+        <div class="count"><b id="resultCount">0</b> results</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GRID -->
+  <div class="wrap">
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="wrap foot-inner">
+      <a href="#" class="brand"><span class="dot"></span>SWIPEVAULT</a>
+      <p>Built by Rich Blueprints · Sample data — prototype V1 · 2026</p>
+    </div>
+  </footer>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+      <div class="modal-hero" id="modalHero"><span class="glyph" id="modalGlyph"></span></div>
+      <div class="modal-body">
+        <p class="modal-type" id="modalType"></p>
+        <h2 id="modalTitle"></h2>
+        <div class="modal-section"><h3>Why it works</h3><p id="modalWhy"></p></div>
+        <div class="modal-section"><h3>The hook / big idea</h3><p id="modalHook"></p></div>
+        <div class="modal-section"><h3>Steal this</h3><p id="modalSteal"></p></div>
+        <div class="modal-tags" id="modalTags"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /* ---------------- SAMPLE DATA (swap for real entries / a fetch later) ---------------- */
+  const SWIPES = [
+    {brand:"Liquid Death",type:"Ad Creative",category:"DTC / Ecom",hue:190,
+      note:"Heavy-metal branding on canned water. Pure pattern-interrupt in a boring category.",
+      why:"They sell a personality, not a product. The absurdity is the moat — nobody screenshots a normal water ad.",
+      hook:"\"Murder your thirst.\" Death-metal energy applied to the most mundane product possible.",
+      steal:"Take the most boring thing you sell and give it an over-the-top identity. Contrast = attention."},
+    {brand:"AG1 (Athletic Greens)",type:"VSL",category:"Health / Supplements",hue:95,
+      note:"Founder-led video that stacks credibility before it ever mentions price.",
+      why:"Authority + routine framing. By the time price shows up you've already bought the identity of 'a person who takes AG1.'",
+      hook:"\"One scoop. One habit. Everything your body's been missing.\" Simplicity as the promise.",
+      steal:"Lead with the daily ritual, not the ingredients. Sell the habit, not the formula."},
+    {brand:"Ridge Wallet",type:"Ad Copy",category:"DTC / Ecom",hue:35,
+      note:"Problem-agitate-solve copy that mocks the 'fat leather wallet' relentlessly.",
+      why:"They named a villain (the bulky wallet) so the product becomes the obvious hero.",
+      hook:"\"Your grandpa's wallet is ruining your back pocket.\"",
+      steal:"Give the status quo a face and make it slightly embarrassing. People buy to escape the villain."},
+    {brand:"Hims",type:"Landing Page",category:"Health / Supplements",hue:150,
+      note:"Destigmatizing page design — calm palette, plain language, quiz-first CTA.",
+      why:"Removes shame from a sensitive category with tone and typography, then routes to a quiz for personalization.",
+      hook:"\"Hair loss is optional.\" Reframes a fear into a choice.",
+      steal:"For anything sensitive, let the design do the reassuring. Soft palette + quiz beats a hard sell."},
+    {brand:"Notion",type:"Landing Page",category:"SaaS",hue:220,
+      note:"Template gallery as the landing page — show the outcome, not the feature list.",
+      why:"People can't picture 'a flexible workspace.' They CAN picture a finished template that looks like their life.",
+      hook:"\"One tool for your whole team. Write, plan, organize, play.\"",
+      steal:"Sell the finished result users can copy today, not the abstract capability."},
+    {brand:"Duolingo",type:"Video Hook",category:"App / Mobile",hue:110,
+      note:"Unhinged mascot TikToks that never mention learning a language for the first 3 seconds.",
+      why:"Entertainment-first. The brand earns attention, then the product rides the reach.",
+      hook:"Chaotic owl does something absurd → 2s of relatability → soft product tie-in.",
+      steal:"Earn the first 3 seconds with entertainment. The 'sell' can wait until you've got the scroll stopped."},
+    {brand:"Oatly",type:"Ad Copy",category:"DTC / Ecom",hue:45,
+      note:"Self-aware, conversational packaging copy that talks to you like a witty friend.",
+      why:"Anti-corporate voice in a corporate category. The copy IS the differentiator.",
+      hook:"\"It's like milk but made for humans.\"",
+      steal:"Write like a person, not a brand. A distinct voice is cheaper than a distinct product."},
+    {brand:"Whoop",type:"VSL",category:"Health / Supplements",hue:0,
+      note:"Data-driven VSL that sells the insight, then makes the hardware feel incidental.",
+      why:"Frames the wearable as a coach, not a gadget. Recurring insight justifies the recurring price.",
+      hook:"\"Stop guessing. Start knowing.\" Certainty as the core benefit.",
+      steal:"If you sell hardware + subscription, make the insight the hero and the device the delivery mechanism."},
+    {brand:"Cometeer",type:"Email",category:"DTC / Ecom",hue:25,
+      note:"Onboarding email sequence that teaches the ritual before pushing a reorder.",
+      why:"Education-led retention. A customer who knows how to use it perfectly is a customer who reorders.",
+      hook:"\"You're brewing it wrong (and that's our fault).\"",
+      steal:"Use email to make the first experience flawless. Reduce buyer's remorse before you upsell."},
+    {brand:"Magic Spoon",type:"Landing Page",category:"DTC / Ecom",hue:300,
+      note:"Nostalgia-forward page — Saturday-morning-cartoon energy meets macros table.",
+      why:"Pairs emotional nostalgia with rational macros. Feeds both the impulse and the justification.",
+      hook:"\"The cereal you loved, grown up.\"",
+      steal:"Give buyers the emotional reason AND the spreadsheet reason. They need both to say yes."},
+    {brand:"Framer",type:"Landing Page",category:"SaaS",hue:250,
+      note:"The landing page is built in the product — the medium proves the message.",
+      why:"Show-don't-tell taken literally. The site's polish is the strongest possible demo.",
+      hook:"\"The site you're on was built in Framer.\"",
+      steal:"When you can, let the artifact prove the claim. Demonstration beats description."},
+    {brand:"Athletic Brewing",type:"Ad Creative",category:"DTC / Ecom",hue:210,
+      note:"Non-alcoholic beer marketed to athletes, not to people 'giving up' alcohol.",
+      why:"Reframes the category from deprivation to performance. New identity, new market.",
+      hook:"\"For the ones who don't stop.\"",
+      steal:"Reframe a 'less-than' product as a performance upgrade. Sell the aspiration, not the sacrifice."},
+    {brand:"Mochi Fitness",type:"Video Hook",category:"Fitness / Coaching",hue:340,
+      note:"Transformation hook that opens on the objection, not the result.",
+      why:"Opening on 'I have no time to work out' captures the exact person scrolling past fitness content.",
+      hook:"\"You don't need an hour. You need 11 minutes and this one rule.\"",
+      steal:"Open on your prospect's #1 objection, then dismantle it in the same breath."},
+    {brand:"Superhuman",type:"Email",category:"SaaS",hue:265,
+      note:"Onboarding built around a 1:1 concierge — the email invites you to a session, not a login.",
+      why:"High-touch onboarding for a premium price. The friction is intentional and signals exclusivity.",
+      hook:"\"Let's get you to Inbox Zero — together, in 30 minutes.\"",
+      steal:"For premium products, add ritual and exclusivity to onboarding instead of removing it."},
+    {brand:"Chubbies",type:"Ad Copy",category:"DTC / Ecom",hue:15,
+      note:"Weekend-warrior voice — every line reads like a group chat, never a brand.",
+      why:"Radical consistency of voice builds a tribe. Customers talk the way the brand talks.",
+      hook:"\"Skies out, thighs out.\"",
+      steal:"Pick a lifestyle moment and own its vocabulary completely. Consistency compounds into identity."},
+    {brand:"Calm",type:"VSL",category:"App / Mobile",hue:200,
+      note:"A VSL that lowers your heart rate — pacing and sound design ARE the pitch.",
+      why:"The ad delivers a micro-dose of the product's benefit. You feel it before you buy it.",
+      hook:"\"Take a breath. This is what the app feels like.\"",
+      steal:"Let the ad give a small taste of the actual outcome. Sampling beats promising."},
+    {brand:"Death Wish Coffee",type:"Ad Creative",category:"DTC / Ecom",hue:0,
+      note:"'World's strongest coffee' — a single bold claim carries the entire brand.",
+      why:"One extreme, defensible claim is more memorable than ten reasonable ones.",
+      hook:"\"The world's strongest coffee.\"",
+      steal:"Find the one superlative you can actually own and hammer it. Focus beats feature-dumping."},
+    {brand:"Loom",type:"Email",category:"SaaS",hue:235,
+      note:"Re-engagement email that shows YOUR unused stats back to you.",
+      why:"Personalized data creates a tiny guilt-loop that pulls dormant users back in.",
+      hook:"\"You've recorded 0 videos this month. Your team's waiting.\"",
+      steal:"Mirror the user's own inactivity data back at them. Personal > generic every time."}
+  ];
+
+  /* ---------------- STATE ---------------- */
+  let activeType = 'all';
+  let activeCategory = 'all';
+  let activeBrand = 'all';
+  let keyword = '';
+  let sortBy = 'new';
+
+  const glyphFor = t => ({
+    'Landing Page':'▤','Ad Copy':'“','Video Hook':'▶','Email':'✉','VSL':'◉','Ad Creative':'◆'
+  }[t] || '★');
+
+  /* ---------------- POPULATE FILTERS ---------------- */
+  const catSet = [...new Set(SWIPES.map(s=>s.category))].sort();
+  const brandSet = [...new Set(SWIPES.map(s=>s.brand))].sort();
+  const catSel = document.getElementById('categoryFilter');
+  const brandSel = document.getElementById('brandFilter');
+  catSet.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
+  brandSet.forEach(b=>{const o=document.createElement('option');o.value=b;o.textContent=b;brandSel.appendChild(o);});
+  document.getElementById('statCount').textContent = SWIPES.length;
+
+  /* ---------------- RENDER ---------------- */
+  const grid = document.getElementById('grid');
+  function render(){
+    let list = SWIPES.filter(s=>{
+      if(activeType!=='all' && s.type!==activeType) return false;
+      if(activeCategory!=='all' && s.category!==activeCategory) return false;
+      if(activeBrand!=='all' && s.brand!==activeBrand) return false;
+      if(keyword){
+        const hay = (s.brand+' '+s.type+' '+s.category+' '+s.note+' '+s.hook+' '+s.why).toLowerCase();
+        if(!hay.includes(keyword.toLowerCase())) return false;
+      }
+      return true;
+    });
+    if(sortBy==='brand') list = list.slice().sort((a,b)=>a.brand.localeCompare(b.brand));
+    document.getElementById('resultCount').textContent = list.length;
+
+    if(!list.length){
+      grid.innerHTML = '<div class="empty"><b>No swipes match that.</b>Try clearing a filter or searching a different brand.</div>';
+      return;
+    }
+    grid.innerHTML = list.map((s,i)=>{
+      const idx = SWIPES.indexOf(s);
+      return `<article class="card" data-idx="${idx}">
+        <div class="thumb" style="background:linear-gradient(135deg,hsl(${s.hue} 45% 14%),hsl(${(s.hue+40)%360} 40% 8%))">
+          <span class="type-tag">${s.type}</span>
+          <span class="glyph" style="color:hsl(${s.hue} 70% 65%)">${glyphFor(s.type)}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-brand">${s.brand}</div>
+          <p class="card-note">${s.note}</p>
+          <div class="card-tags">
+            <span class="tag">${s.category}</span>
+          </div>
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+  /* ---------------- EVENTS ---------------- */
+  document.getElementById('typeChips').addEventListener('click',e=>{
+    const c = e.target.closest('.chip'); if(!c) return;
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active'); activeType = c.dataset.type; render();
+  });
+  catSel.addEventListener('change',e=>{activeCategory=e.target.value;render();});
+  brandSel.addEventListener('change',e=>{activeBrand=e.target.value;render();});
+  document.getElementById('sortFilter').addEventListener('change',e=>{sortBy=e.target.value;render();});
+  document.getElementById('keywordFilter').addEventListener('input',e=>{keyword=e.target.value;render();});
+
+  // hero search feeds the keyword filter and scrolls to grid
+  function heroSearch(){
+    keyword = document.getElementById('heroSearch').value;
+    document.getElementById('keywordFilter').value = keyword;
+    render();
+    document.getElementById('browse').scrollIntoView();
+  }
+  document.getElementById('heroSearchBtn').addEventListener('click',heroSearch);
+  document.getElementById('heroSearch').addEventListener('keydown',e=>{if(e.key==='Enter')heroSearch();});
+
+  /* ---------------- MODAL ---------------- */
+  const modal = document.getElementById('modal');
+  grid.addEventListener('click',e=>{
+    const card = e.target.closest('.card'); if(!card) return;
+    const s = SWIPES[card.dataset.idx];
+    document.getElementById('modalHero').style.background = `linear-gradient(135deg,hsl(${s.hue} 45% 14%),hsl(${(s.hue+40)%360} 40% 8%))`;
+    const mg = document.getElementById('modalGlyph');
+    mg.textContent = glyphFor(s.type); mg.style.color = `hsl(${s.hue} 70% 65%)`;
+    document.getElementById('modalType').textContent = s.type;
+    document.getElementById('modalTitle').textContent = s.brand;
+    document.getElementById('modalWhy').textContent = s.why;
+    document.getElementById('modalHook').textContent = s.hook;
+    document.getElementById('modalSteal').textContent = s.steal;
+    document.getElementById('modalTags').innerHTML =
+      `<span class="tag">${s.type}</span><span class="tag">${s.category}</span><span class="tag">${s.brand}</span>`;
+    modal.classList.add('open'); document.body.style.overflow='hidden';
+  });
+  function closeModal(){modal.classList.remove('open');document.body.style.overflow='';}
+  document.getElementById('modalClose').addEventListener('click',closeModal);
+  modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+  /* ---------------- MOBILE NAV ---------------- */
+  const ham = document.getElementById('hamburger');
+  const mm = document.getElementById('mobileMenu');
+  ham.addEventListener('click',()=>{
+    const open = mm.classList.toggle('open');
+    ham.classList.toggle('open',open);
+    ham.setAttribute('aria-expanded',open);
+  });
+  mm.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{
+    mm.classList.remove('open');ham.classList.remove('open');ham.setAttribute('aria-expanded',false);
+  }));
+
+  render();
+  </script>
+
+  <!-- Vercel Analytics + Speed Insights (no-op off Vercel) -->
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
+  <script defer src="/_vercel/speed-insights/script.js"></script>
+</body>
+</html>
