@@ -1,6 +1,6 @@
 <!--
   Project: Rich Blueprints — Swipe Directory (working title: SWIPEVAULT)
-  Version: V1  |  Date: 2026-08-06
+  Version: V2  |  Date: 2026-08-07  (V2: mobile filter bar no longer sticky; chips scroll horizontally)
   A searchable swipe-file directory for budding marketers.
   Filter proven assets by asset type, category, or brand. Click a card for the breakdown.
   Self-contained: all CSS/JS inline, sample data baked in. No backend yet (client-side filter over a JS array).
@@ -152,7 +152,13 @@
       .nav-links{display:none}
       .hamburger{display:flex}
       .grid{grid-template-columns:1fr}
-      .toolbar{top:66px}
+      /* toolbar scrolls away instead of pinning and eating the screen */
+      .toolbar{position:static;top:auto;margin-top:40px;padding:16px 0}
+      /* asset-type chips become one swipe-across row instead of 3 stacked rows */
+      .chips{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;scrollbar-width:none;-ms-overflow-style:none}
+      .chips::-webkit-scrollbar{display:none}
+      .chip{flex:0 0 auto}
+      .filter-row{gap:10px}
       .count{width:100%;margin-left:0;margin-top:4px}
       .stats{gap:28px}
     }
